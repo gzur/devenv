@@ -54,8 +54,9 @@ def commit():
     if container is None:
         click.echo("No container found for environment.")
     else:
-        container.commit(get_environment_identifier())
-        click.echo("Container commited.")
+        image_id = get_environment_identifier()
+        container.commit(image_id)
+        click.echo("Container commited as: {image}".format(image=image_id))
 
 
 @cli.command()
