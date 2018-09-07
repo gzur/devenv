@@ -1,4 +1,4 @@
-# Development Environment manager with Docker.
+# Development Environment Manager
 
 ## Main features:
   * Persist installed packages, configuration and bash history for later.
