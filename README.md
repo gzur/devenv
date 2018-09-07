@@ -1,5 +1,5 @@
-# Development environment isolation suite
-General-purpose dockerized shell environment manager.
+# `devenv`
+A general-purpose dockerized shell environment manager.
 
 ## Main features:
   * Persist installed packages, configuration and bash history for later.
