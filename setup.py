@@ -21,9 +21,9 @@ if 'SETUP_BRANCH' in os.environ:
 
 
 setup(
-    name='Environment-Isolation-Engine',
+    name='devenv',
     version=version,
-    description='Environment Isolation Engine',
+    description='Development environment isolation suite (',
     author='gzur',
     author_email='gzur@gzur.net',
     url='http://gzur/net',
