@@ -2,9 +2,9 @@
 General-purpose dockerized shell environment manager.
 
 ## Main features:
-  * Automatically discover previously build/modified enviroments (based on project path)
   * Persist installed packages, configuration and bash history for later.
   * Automatically mount your project into the environment.
+  * Automatically discover previously built/modified enviroments (based on project path)
   * Specify what base docker image to build environments on top off..
  
 # Quickstart
