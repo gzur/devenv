@@ -1,6 +1,5 @@
-# Development environment isolation suite (working title)
-Working protoype of a general-purpose dockerized shell environment manager (virtualenv gone nuclear)
-Features:
+# Development environment isolation suite
+Working protoype of a general-purpose dockerized shell environment manager.
 
 ## Main features:
   * Automatically discover previously build/modified enviroments (based on project path)
