@@ -1,5 +1,4 @@
-# `devenv`
-# general-purpose dockerized shell environment manager.
+# `devenv` - general-purpose dockerized shell environment manager.
 
 ## Main features:
   * Persist installed packages, configuration and bash history for later.
