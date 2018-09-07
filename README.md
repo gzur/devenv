@@ -21,7 +21,7 @@ devenv shell
 
 # Usage
 All of the below assumes you to be located in your project directory.
-devenv bases all of its assumptions on where you are located on a file-system level.
+`devenv` bases all of its assumptions on where you are located on a file-system level.
 
 ### Run shell
 ```bash
