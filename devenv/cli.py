@@ -2,12 +2,14 @@
 import os
 import json
 import click
-from devenv.lib import get_container_name, \
+from devenv.lib import \
+    get_container_name, \
     get_container, \
     get_environment_identifier,\
     get_image, \
     delete_containers, \
     delete_images, \
+    commit_container, \
     restart_shell, \
     start_new_shell, \
     get_dirname, \
@@ -22,22 +24,37 @@ def cli(**kwargs):
 @cli.command()
 @click.option('--verbose', is_flag=True, type=click.BOOL,
               help='Enable verbose output')
-def shell(verbose=False):
-    env_id = get_environment_identifier()
+@click.option('--force', is_flag=True, type=click.BOOL,
+              help='Overwrite existing images')
+@click.option('--dockerfile', type=click.STRING,
+              help='Specify Dockerfile to base the environment on.')
+@click.option('--image', type=click.STRING,
+              help='Specify an existin image to base environment on.')
+@click.option('--volume', type=click.STRING, multiple=True, help="Specify volume mounts of the form ]"
+                                                  "[host_path]:[container_path]")
+@click.option('--new', is_flag=True, type=click.BOOL)
+def shell(**kwargs):
+    user_volumes = kwargs.pop('volume', tuple())
+    restart_container = kwargs.pop('new', False)
     container_name = get_container_name()
-    image_name = get_environment_identifier()
-    if get_image(image_name) is None:
+    env_id = get_environment_identifier()
+    if get_image(env_id) is None:
         # Transparently build an image if one does not exist.
-        _build_wrapper(verbose=verbose)
+        _build_wrapper(**kwargs)
 
+    default_volumes = "{host_dir}:{container_dir}" \
+        .format(host_dir=os.getcwd(),
+                container_dir='/{dir_name}'.format(
+                    dir_name=get_dirname()))
+
+    volumes = (default_volumes,) + user_volumes
+    if restart_container:
+        commit_container()
+        delete_containers()
     if get_container(container_name) is not None:
         click.echo("Container exists - resuming")
         restart_shell(container_name)
     else:
-        # TODO: Allow the user to change what is volume mounted.
-        volumes = "{host_dir}:{container_dir}"\
-            .format(host_dir=os.getcwd(), container_dir='/{dir_name}'.format(dir_name=get_dirname()))
-
         start_new_shell(env_id, container_name, volumes)
     click.echo("Exited. (Run \"devenv commit\" to save state")
 

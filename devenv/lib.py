@@ -4,7 +4,9 @@ import docker
 import hashlib
 import io
 # from docker import APIClient
+import logging
 
+log = logging.getLogger(__file__)
 DEFAULT_BASE_IMAGE = 'centos:6'
 DOCKERFILE = """
 FROM {base_image}
@@ -37,20 +39,9 @@ def delete_images(name):
 
 def restart_shell(container_name):
     os.system("docker start -a -i {container_name}".format(
-        container_name=container_name
-    ))
+        container_name=container_name))
 
 
-def start_new_shell(env_id, container_name, volumes):
-
-    return os.system("docker run -i -t -v {volumes} "
-                     "--label=owner={env_id} "
-                     "--name={container_name} "
-                     "{env_id} "
-                     "/bin/bash".format(
-                         env_id=env_id,
-                         container_name=container_name,
-                         volumes=volumes))
 def commit_container():
     container_name = get_container_name()
     container = get_container(container_name)
@@ -60,6 +51,30 @@ def commit_container():
         image_id = get_environment_identifier()
         container.commit(image_id)
     return "Container commited as: {image}".format(image=image_id)
+
+
+def generate_vol_string(volumes):
+    vol_str = ""
+    for vol in volumes:
+        vol_str += " -v {vol} ".format(vol=vol)
+    return vol_str
+
+
+def start_new_shell(env_id, container_name, volumes=tuple, env_file=None):
+    volume_str = generate_vol_string(volumes)
+    log.debug("Volume string generated: {vol_str}".format(vol_str=volume_str))
+    cmd = "docker run -i -t {volumes} " \
+        "--label=owner={env_id} " \
+        "--name={container_name} " \
+        "{env_id} " \
+        "{shell_cmd}".format(
+            env_id=env_id,
+            container_name=container_name,
+            volumes=volume_str,
+            shell_cmd="/bin/bash",
+        )
+    log.debug("Docker command: [cmd]".format(cmd=cmd))
+    return os.system(cmd)
 
 
 def get_dirname(dir_path=None):
