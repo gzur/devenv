@@ -11,7 +11,7 @@ from devenv.lib import get_container_name, \
     restart_shell, \
     start_new_shell, \
     get_dirname, \
-    _build
+    build_image
 
 @click.group()
 @click.option('--debug/--no-debug', default=False,
@@ -84,7 +84,7 @@ def build(force=False, verbose=True, dockerfile=None, image=None):
 
 
 def _build_wrapper(force=False, verbose=True, dockerfile=None, image=None):
-    build_output = _build(force, dockerfile, image)
+    build_output = build_image(force, dockerfile, image)
     for x in next(build_output):
         decoded_lines = []
         try:

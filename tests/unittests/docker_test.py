@@ -1,7 +1,7 @@
 import os, pty
 import docker
 from devenv.lib import get_environment_identifier, \
-    get_container_name, _build, start_new_shell, get_container
+    get_container_name, build_image, start_new_shell, get_container
 
 test_client = docker.from_env()
 
@@ -22,7 +22,7 @@ def test_container_name():
 
 def test_build_container():
     os.chdir('/tmp')
-    _build()
+    build_image()
     image_name = get_environment_identifier()
     test_client.images.get(image_name)
     assert(image_name is not None)
@@ -30,7 +30,7 @@ def test_build_container():
 
 # def test_start_container():
 #     os.chdir('/tmp')
-#     _build()
+#     build_image()
 #     env_name = get_environment_identifier()
 #     container_name = get_container_name()
 #

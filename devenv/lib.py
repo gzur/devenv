@@ -97,19 +97,23 @@ def get_container_name() -> str:
     return "container_{image_name}".format(image_name=get_environment_identifier())
 
 
-def _build(force=False, dockerfile_path=None, base_image=None):
+def build_image(force=False, dockerfile_path=None, base_image=None):
     docker_file_str = DOCKERFILE.format(base_image=DEFAULT_BASE_IMAGE)
+
     if base_image is not None:
         docker_file_str = DOCKERFILE.format(base_image=base_image)
+
     elif dockerfile_path is not None:
         with open(dockerfile_path, 'r') as dockerfile:
             docker_file_str = dockerfile.read()
             docker_file_str
+
     docker_file_str += DOCKERFILE_END
     docker_file = io.BytesIO(docker_file_str.format(
         env_id=get_environment_identifier(),
         work_dir=get_dirname()
     ).encode())
+
     env_identifier = get_environment_identifier()
     build_params = dict(
         fileobj= docker_file,
