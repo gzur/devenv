@@ -51,6 +51,15 @@ def start_new_shell(env_id, container_name, volumes):
                          env_id=env_id,
                          container_name=container_name,
                          volumes=volumes))
+def commit_container():
+    container_name = get_container_name()
+    container = get_container(container_name)
+    if container is None:
+        return "No container found for environment."
+    else:
+        image_id = get_environment_identifier()
+        container.commit(image_id)
+    return "Container commited as: {image}".format(image=image_id)
 
 
 def get_dirname(dir_path=None):

@@ -49,14 +49,7 @@ def push():
 
 @cli.command()
 def commit():
-    container_name = get_container_name()
-    container = get_container(container_name)
-    if container is None:
-        click.echo("No container found for environment.")
-    else:
-        image_id = get_environment_identifier()
-        container.commit(image_id)
-        click.echo("Container commited as: {image}".format(image=image_id))
+    click.echo(commit_container())
 
 
 @cli.command()
