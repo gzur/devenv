@@ -70,18 +70,24 @@ def commit():
 
 
 @cli.command()
-def clean():
+@click.option('--all', is_flag=True,
+              type=click.BOOL,
+              default=False,
+              help='Also delete image')
+def clean(all=False):
     deleted_containerws = delete_containers()
     if delete_containers:
         click.echo("Deleted containers: {containers}"
                    .format(containers=deleted_containerws))
 
-    image_to_delete = get_environment_identifier()
+    import ipdb;ipdb.set_trace()
+    if all:
+        image_to_delete = get_environment_identifier()
 
-    deleted_image = delete_images(image_to_delete)
-    if deleted_image:
-        click.echo("Deleted image {image_name}"
-                   .format(image_name=image_to_delete))
+        deleted_image = delete_images(image_to_delete)
+        if deleted_image:
+            click.echo("Deleted image {image_name}"
+                       .format(image_name=image_to_delete))
 
 
 @cli.command()
