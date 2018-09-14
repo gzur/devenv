@@ -60,7 +60,16 @@ def generate_vol_string(volumes):
     return vol_str
 
 
-def start_new_shell(env_id, container_name, volumes=tuple, env_file=None):
+def start_new_shell(env_id, container_name, user_volumes=tuple, env_file=None):
+    default_volumes = (
+        "{host_dir}:{container_dir}".format(
+            host_dir=os.getcwd(),
+            container_dir='/{dir_name}'.format(
+                dir_name=get_dirname())),
+        "~/.gitconfig:/root/.gitconfig",
+        "`pwd`/.devenv-home-dir:/root",
+    )
+    volumes = default_volumes + user_volumes
     volume_str = generate_vol_string(volumes)
     log.debug("Volume string generated: {vol_str}".format(vol_str=volume_str))
     cmd = "docker run -i -t {volumes} " \

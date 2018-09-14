@@ -52,6 +52,7 @@ def cli(**kwargs):
                                                   "[host_path]:[container_path]")
 @click.option('--new', is_flag=True, type=click.BOOL)
 def shell(**kwargs):
+    # todo: there is way too much logic in here
     user_volumes = kwargs.pop('volume', tuple())
     restart_container = kwargs.pop('new', False)
     container_name = get_container_name()
@@ -60,12 +61,6 @@ def shell(**kwargs):
         # Transparently build an image if one does not exist.
         _build_wrapper(**kwargs)
 
-    default_volumes = "{host_dir}:{container_dir}" \
-        .format(host_dir=os.getcwd(),
-                container_dir='/{dir_name}'.format(
-                    dir_name=get_dirname()))
-
-    volumes = (default_volumes,) + user_volumes
     if restart_container:
         commit_container()
         delete_containers()
@@ -73,7 +68,7 @@ def shell(**kwargs):
         click.echo("Container exists - resuming")
         restart_shell(container_name)
     else:
-        start_new_shell(env_id, container_name, volumes)
+        start_new_shell(env_id, container_name, user_volumes)
     click.echo("Exited. (Run \"devenv commit\" to save state")
 
 
