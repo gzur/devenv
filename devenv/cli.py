@@ -15,17 +15,35 @@ from devenv.lib import \
     get_dirname, \
     build_image
 
+
+_global_test_options = [
+    click.option('--verbose', '-v', 'verbosity',
+                 flag_value=2,
+                 default=1,
+                 help='Verbose output'),
+    click.option('--quiet', '-q', 'verbosity',
+                 flag_value=0,
+                 help='Minimal output'),
+    click.option('--force', '-f',
+                 is_flag=True,
+                 default=False,
+                 help='Stop on failure'),
+]
+
+def global_test_options(func):
+    for option in reversed(_global_test_options):
+        func = option(func)
+    return func
+
 @click.group()
 @click.option('--debug/--no-debug', default=False,
               envvar='REPO_DEBUG')
 def cli(**kwargs):
     pass
 
+
 @cli.command()
-@click.option('--verbose', is_flag=True, type=click.BOOL,
-              help='Enable verbose output')
-@click.option('--force', is_flag=True, type=click.BOOL,
-              help='Overwrite existing images')
+@global_test_options
 @click.option('--dockerfile', type=click.STRING,
               help='Specify Dockerfile to base the environment on.')
 @click.option('--image', type=click.STRING,
@@ -91,22 +109,19 @@ def clean(all=False):
 
 
 @cli.command()
-@click.option('--force', is_flag=True, type=click.BOOL,
-              help='Overwrite existing images')
 @click.option('--dockerfile', type=click.STRING,
               help='Specify Dockerfile to base the environment on.')
 @click.option('--image', type=click.STRING,
               help='Specify an existin image to base environment on.')
-@click.option('--verbose', is_flag=True, type=click.BOOL,
-              help='Enable verbose output')
-def build(force=False, verbose=True, dockerfile=None, image=None):
+@global_test_options
+def build(force=False, verbosity=1, dockerfile=None, image=None):
     if force:
         click.echo("Forcing new image {image_name}"
                    .format(image_name=get_environment_identifier()))
-    _build_wrapper(force, verbose, dockerfile, image)
+    _build_wrapper(force, verbosity, dockerfile, image)
 
 
-def _build_wrapper(force=False, verbose=True, dockerfile=None, image=None):
+def _build_wrapper(force=False, verbosity=1, dockerfile=None, image=None):
     build_output = build_image(force, dockerfile, image)
     for x in next(build_output):
         decoded_lines = []
@@ -125,7 +140,7 @@ def _build_wrapper(force=False, verbose=True, dockerfile=None, image=None):
         for decoded_line in decoded_lines:
             line = decoded_line.get('stream')
             if line:
-                if verbose:
+                if verbosity > 1:
                     click.echo(line, nl=False)
             else:
                 if line:
