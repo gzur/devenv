@@ -71,6 +71,14 @@ def shell(**kwargs):
         start_new_shell(env_id, container_name, user_volumes)
     click.echo("Exited. (Run \"devenv commit\" to save state")
 
+@cli.command()
+def init():
+    click.echo("Marking directory as a developent environment")
+    open(".devenv","w+").close()
+    _build_wrapper()
+    container_name = get_container_name()
+    env_id = get_environment_identifier()
+    start_new_shell(env_id, container_name, tuple())
 
 @cli.command()
 def push():
