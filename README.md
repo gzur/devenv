@@ -27,7 +27,7 @@ _*Note:* All options accepted by `build` are also applicable to `shell`_
 #### Specify your own base image.
 By default, `devenv` ships using the centos:6 docker image as a base image. This can be overridden via the command line:
 ```bash
-devenv build --verbose --image=python:37
+devenv build --verbose --base_image=python:37
 ```
 Any subsequent `devenv shell` commands run inside the same directory, will default to this image until `devenv clean` is run.
 
@@ -55,7 +55,7 @@ devenv shell
 #### Override base-image
  Start shell in docker container based off ubuntu - rather than the default centos.
 ```bash
-devenv shell --verbose --image=ubuntu:latest 
+devenv shell --verbose --base_image=ubuntu:latest 
 ```
 #### User-defined volume mounts:
 ```bash
