@@ -12,7 +12,6 @@ from devenv.lib import \
     commit_container, \
     restart_shell, \
     start_new_shell, \
-    get_dirname, \
     build_image
 
 
@@ -46,7 +45,7 @@ def cli(**kwargs):
 @global_test_options
 @click.option('--dockerfile', type=click.STRING,
               help='Specify Dockerfile to base the environment on.')
-@click.option('--image', type=click.STRING,
+@click.option('--base_image', type=click.STRING,
               help='Specify an existin image to base environment on.')
 @click.option('--volume', type=click.STRING, multiple=True, help="Specify volume mounts of the form ]"
                                                   "[host_path]:[container_path]")
@@ -101,7 +100,6 @@ def clean(all=False):
         click.echo("Deleted containers: {containers}"
                    .format(containers=deleted_containerws))
 
-    import ipdb;ipdb.set_trace()
     if all:
         image_to_delete = get_environment_identifier()
 
@@ -114,18 +112,18 @@ def clean(all=False):
 @cli.command()
 @click.option('--dockerfile', type=click.STRING,
               help='Specify Dockerfile to base the environment on.')
-@click.option('--image', type=click.STRING,
+@click.option('--base_image', type=click.STRING,
               help='Specify an existin image to base environment on.')
 @global_test_options
-def build(force=False, verbosity=1, dockerfile=None, image=None):
+def build(force=False, verbosity=1, dockerfile=None, base_image=None):
     if force:
         click.echo("Forcing new image {image_name}"
                    .format(image_name=get_environment_identifier()))
-    _build_wrapper(force, verbosity, dockerfile, image)
+    _build_wrapper(force, verbosity, dockerfile, base_image)
 
 
-def _build_wrapper(force=False, verbosity=1, dockerfile=None, image=None):
-    build_output = build_image(force, dockerfile, image)
+def _build_wrapper(force=False, verbosity=1, dockerfile=None, base_image=None):
+    build_output = build_image(force, dockerfile, base_image)
     for x in next(build_output):
         decoded_lines = []
         try:

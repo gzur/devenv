@@ -3,18 +3,23 @@ import os
 import docker
 import hashlib
 import io
-# from docker import APIClient
 import logging
+
+# TODO:
+#   * Namespaced bash history
+#   * Cross-platform compatibility
+#   * Override default shell command
 
 log = logging.getLogger(__file__)
 DEFAULT_BASE_IMAGE = 'centos:6'
 DOCKERFILE = """
 FROM {base_image}
 """
-
 DOCKERFILE_END = """
-ENV PS1='[\\u@{env_id} \w]\$ '
+ENV PS1="\[\e[31m\](devenv) \[\e[m\] \\u@{env_id} \w\$ "
+ENV PS1="\[\e[31m\](devenv)\[\e[m\] \\u@{env_id} \w\$ "
 WORKDIR /{work_dir}
+RUN echo -e '#!/bin/bash\\nls -la "$@"' > /usr/bin/ll && chmod +x /usr/bin/ll
 """
 client = docker.from_env()
 api_client = docker.APIClient()
@@ -60,7 +65,13 @@ def generate_vol_string(volumes):
     return vol_str
 
 
-def start_new_shell(env_id, container_name, user_volumes=tuple, env_file=None):
+def start_new_shell(env_id, container_name,
+                    user_volumes=tuple,
+                    env_file=None,
+                    entrypoint='/bin/bash'):
+    env_file_str = ""
+    if env_file is not None:
+        env_file_str = "--env-file {env_file}".format(env_file=env_file)
     default_volumes = (
         "{host_dir}:{container_dir}".format(
             host_dir=os.getcwd(),
@@ -72,15 +83,18 @@ def start_new_shell(env_id, container_name, user_volumes=tuple, env_file=None):
     volumes = default_volumes + user_volumes
     volume_str = generate_vol_string(volumes)
     log.debug("Volume string generated: {vol_str}".format(vol_str=volume_str))
+
     cmd = "docker run -i -t {volumes} " \
         "--label=owner={env_id} " \
         "--name={container_name} " \
+        "{env_file_str} " \
         "{env_id} " \
-        "{shell_cmd}".format(
+        "{entrypoint}".format(
             env_id=env_id,
             container_name=container_name,
             volumes=volume_str,
-            shell_cmd="/bin/bash",
+            env_file_str=env_file_str,
+            entrypoint=entrypoint,
         )
     log.debug("Docker command: [cmd]".format(cmd=cmd))
     return os.system(cmd)
