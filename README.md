@@ -74,3 +74,6 @@ _**Note**: Existing volume mounts need to be re-specified when invoking `--new`_
 ```bash
 devenv shell --new --volume=/tmp:/tmp --volume ~.aws:/root/.aws --volume /var/log:/var/log
 ```
+
+# Contributing
+Pull requests are welcome.
