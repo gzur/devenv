@@ -46,28 +46,43 @@ def cli(**kwargs):
 @click.option('--dockerfile', type=click.STRING,
               help='Specify Dockerfile to base the environment on.')
 @click.option('--base_image', type=click.STRING,
-              help='Specify an existin image to base environment on.')
-@click.option('--volume', type=click.STRING, multiple=True, help="Specify volume mounts of the form ]"
-                                                  "[host_path]:[container_path]")
-@click.option('--new', is_flag=True, type=click.BOOL)
+              help='Specify an existing image to base environment on.')
+@click.option('--volume', type=click.STRING, multiple=True,
+              help="Specify volume mounts using the normal docker syntax")
+@click.option('--docker_opts', type=click.STRING,
+              help='Forward random docker opts (Advanced).')
+@click.option('--new', is_flag=True, type=click.BOOL,
+              help="Force the re-creation of the containers."
+                   "This is necessary if adding runtime options to an already running container,"
+                   "such as adding/removing ports or volume mounts."
+                   "Be aware that this option commits your container to a new image and starts"
+                   "a new container based on the committed image.")
 def shell(**kwargs):
     # todo: there is way too much logic in here
     user_volumes = kwargs.pop('volume', tuple())
     restart_container = kwargs.pop('new', False)
+
+    docker_opts = kwargs.pop("docker_opts") or " "
+
     container_name = get_container_name()
     env_id = get_environment_identifier()
     if get_image(env_id) is None:
         # Transparently build an image if one does not exist.
-        _build_wrapper(**kwargs)
+        _build_wrapper(
+            kwargs.get("force"),
+            kwargs.get("verbosity"),
+            kwargs.get("dockerfile"),
+            kwargs.get("base_image")
+        )
 
     if restart_container:
-        commit_container()
+        commit_container(temporary=True)
         delete_containers()
     if get_container(container_name) is not None:
         click.echo("Container exists - resuming")
         restart_shell(container_name)
     else:
-        start_new_shell(env_id, container_name, user_volumes)
+        start_new_shell(env_id, container_name, user_volumes, docker_opts=docker_opts)
     click.echo("Exited. (Run \"devenv commit\" to save state")
 
 @cli.command()
@@ -122,6 +137,7 @@ def build(force=False, verbosity=1, dockerfile=None, base_image=None):
     _build_wrapper(force, verbosity, dockerfile, base_image)
 
 
+# def _build_wrapper(force=False, verbosity=1, dockerfile=None, base_image=None):
 def _build_wrapper(force=False, verbosity=1, dockerfile=None, base_image=None):
     build_output = build_image(force, dockerfile, base_image)
     for x in next(build_output):
@@ -139,16 +155,18 @@ def _build_wrapper(force=False, verbosity=1, dockerfile=None, base_image=None):
                     as_json = json.loads(bad_line.decode())
                     decoded_lines.append(as_json)
         for decoded_line in decoded_lines:
-            line = decoded_line.get('stream')
+            line = decoded_line.get('stream') or decoded_line.get('aux', {}).get('ID')
             if line:
-                if verbosity > 1:
+                # if verbosity > 1:
                     click.echo(line, nl=False)
             else:
-                if line:
-                    line = decoded_line.get('aux')
-                    click.echo(line.get('ID'))
+                error_message = decoded_line.get('errorDetail', {})['message']
+                if error_message:
+                    error_msg(error_message)
 
 
+def error_msg(msg):
+    click.echo(click.style("An error occured: %s" % msg, fg='red'))
 
 @click.group('internal')
 def internal():

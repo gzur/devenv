@@ -25,9 +25,11 @@ client = docker.from_env()
 api_client = docker.APIClient()
 
 
-def delete_containers():
+def delete_containers(env_identifier=None):
     # only delete containers belonging to this environment
-    filter_str = 'owner={env_name}'.format(env_name=get_environment_identifier())
+    if env_identifier is None:
+        env_identifier = get_environment_identifier()
+    filter_str = 'owner={env_identifier}'.format(env_identifier=env_identifier)
     deleted = client.containers.prune(dict(label=filter_str))
     container_ids = ",".join(deleted.get('ContainersDeleted') or [])
     return container_ids
@@ -47,13 +49,13 @@ def restart_shell(container_name):
         container_name=container_name))
 
 
-def commit_container():
+def commit_container(temporary=False):
     container_name = get_container_name()
     container = get_container(container_name)
     if container is None:
         return "No container found for environment."
     else:
-        image_id = get_environment_identifier()
+        image_id = get_environment_identifier(temporary=temporary)
         container.commit(image_id)
     return "Container commited as: {image}".format(image=image_id)
 
@@ -68,7 +70,9 @@ def generate_vol_string(volumes):
 def start_new_shell(env_id, container_name,
                     user_volumes=tuple,
                     env_file=None,
-                    entrypoint='/bin/bash'):
+                    entrypoint='/bin/bash',
+                    docker_opts=' ',
+                    restore_from_tmp=False):
     env_file_str = ""
     if env_file is not None:
         env_file_str = "--env-file {env_file}".format(env_file=env_file)
@@ -83,20 +87,23 @@ def start_new_shell(env_id, container_name,
     volumes = default_volumes + user_volumes
     volume_str = generate_vol_string(volumes)
     log.debug("Volume string generated: {vol_str}".format(vol_str=volume_str))
-
     cmd = "docker run -i -t {volumes} " \
         "--label=owner={env_id} " \
         "--name={container_name} " \
+        "{docker_opts} " \
         "{env_file_str} " \
-        "{env_id} " \
+        "{image_id} " \
         "{entrypoint}".format(
+            image_id=env_id,
             env_id=env_id,
             container_name=container_name,
+            docker_opts=docker_opts,
             volumes=volume_str,
             env_file_str=env_file_str,
             entrypoint=entrypoint,
         )
     log.debug("Docker command: [cmd]".format(cmd=cmd))
+    print("Docker command: {cmd}".format(cmd=cmd))
     return os.system(cmd)
 
 
@@ -106,13 +113,17 @@ def get_dirname(dir_path=None):
     return os.path.basename(dir_path)
 
 
-def get_environment_identifier():
+def get_environment_identifier(temporary=False):
     dir_path = os.getcwd()
     dir_name = get_dirname(dir_path)
+    tmp_str = ""
+    if temporary:
+        tmp_str += "_tmp"
     hasher = hashlib.sha1()
     hasher.update(dir_path.encode())
-    return "{dirname}_{path_hash}".format(
+    return "{dirname}_{path_hash}{tmp_str}".format(
         dirname=dir_name,
+        tmp_str=tmp_str,
         path_hash=hasher.hexdigest()[:8]
     )
 
