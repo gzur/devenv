@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-import os
+import sys
 import json
 import click
 from devenv.lib import \
     get_container_name, \
     get_container, \
-    get_environment_identifier,\
+    generate_image_name,\
     get_image, \
     delete_containers, \
     delete_images, \
     commit_container, \
     restart_shell, \
     start_new_shell, \
-    build_image
+    build_image, \
+    test_docker_connection
 
 
 _global_test_options = [
@@ -29,15 +30,20 @@ _global_test_options = [
                  help='Stop on failure'),
 ]
 
+
 def global_test_options(func):
     for option in reversed(_global_test_options):
         func = option(func)
     return func
 
+
 @click.group()
 @click.option('--debug/--no-debug', default=False,
               envvar='REPO_DEBUG')
 def cli(**kwargs):
+    if test_docker_connection() is False:
+        error_msg("Could not connect to docker daemon. Is it running?")
+        sys.exit(1)
     pass
 
 
@@ -45,6 +51,8 @@ def cli(**kwargs):
 @global_test_options
 @click.option('--dockerfile', type=click.STRING,
               help='Specify Dockerfile to base the environment on.')
+@click.option('--env_file', type=click.STRING,
+              help='Load env from env file.')
 @click.option('--base_image', type=click.STRING,
               help='Specify an existing image to base environment on.')
 @click.option('--volume', type=click.STRING, multiple=True,
@@ -65,7 +73,7 @@ def shell(**kwargs):
     docker_opts = kwargs.pop("docker_opts") or " "
 
     container_name = get_container_name()
-    env_id = get_environment_identifier()
+    env_id = generate_image_name()
     if get_image(env_id) is None:
         # Transparently build an image if one does not exist.
         _build_wrapper(
@@ -82,8 +90,9 @@ def shell(**kwargs):
         click.echo("Container exists - resuming")
         restart_shell(container_name)
     else:
-        start_new_shell(env_id, container_name, user_volumes, docker_opts=docker_opts)
+        start_new_shell(env_id, container_name, user_volumes, docker_opts=docker_opts, env_file=kwargs.get('env_file'))
     click.echo("Exited. (Run \"devenv commit\" to save state")
+
 
 @cli.command()
 def init():
@@ -91,8 +100,9 @@ def init():
     open(".devenv","w+").close()
     _build_wrapper()
     container_name = get_container_name()
-    env_id = get_environment_identifier()
+    env_id = generate_image_name()
     start_new_shell(env_id, container_name, tuple())
+
 
 @cli.command()
 def push():
@@ -110,13 +120,13 @@ def commit():
               default=False,
               help='Also delete image')
 def clean(all=False):
-    deleted_containerws = delete_containers()
+    deleted_containers = delete_containers()
     if delete_containers:
         click.echo("Deleted containers: {containers}"
-                   .format(containers=deleted_containerws))
+                   .format(containers=deleted_containers))
 
     if all:
-        image_to_delete = get_environment_identifier()
+        image_to_delete = generate_image_name()
 
         deleted_image = delete_images(image_to_delete)
         if deleted_image:
@@ -133,13 +143,14 @@ def clean(all=False):
 def build(force=False, verbosity=1, dockerfile=None, base_image=None):
     if force:
         click.echo("Forcing new image {image_name}"
-                   .format(image_name=get_environment_identifier()))
+                   .format(image_name=generate_image_name()))
     _build_wrapper(force, verbosity, dockerfile, base_image)
 
 
 # def _build_wrapper(force=False, verbosity=1, dockerfile=None, base_image=None):
 def _build_wrapper(force=False, verbosity=1, dockerfile=None, base_image=None):
     build_output = build_image(force, dockerfile, base_image)
+    last_line = None
     for x in next(build_output):
         decoded_lines = []
         try:
@@ -155,18 +166,31 @@ def _build_wrapper(force=False, verbosity=1, dockerfile=None, base_image=None):
                     as_json = json.loads(bad_line.decode())
                     decoded_lines.append(as_json)
         for decoded_line in decoded_lines:
-            line = decoded_line.get('stream') or decoded_line.get('aux', {}).get('ID')
+            line = None
+            if decoded_line.get('status') is not None:
+                if decoded_line.get('status') == last_line:
+                    line = "."
+                else:
+                    line = "\n" + decoded_line.get('status')
+                last_line = decoded_line.get('status')
+            else:
+                line = decoded_line.get('stream') \
+                       or decoded_line.get('aux', {}).get('ID') \
+                       or "[No message decoded from line]" + json.dumps(decoded_line)
             if line:
                 # if verbosity > 1:
                     click.echo(line, nl=False)
             else:
-                error_message = decoded_line.get('errorDetail', {})['message']
-                if error_message:
-                    error_msg(error_message)
+                message = None
+                if decoded_line.get('errorDetail') is not None:
+                    message = decoded_line.get('errorDetail', {})['message']
+                if message:
+                    error_msg("{}\n".format(message.strip()))
+                    sys.exit(-1)
 
 
 def error_msg(msg):
-    click.echo(click.style("An error occured: %s" % msg, fg='red'))
+    click.echo(click.style("Error: %s" % msg, fg='red'))
 
 @click.group('internal')
 def internal():
@@ -175,7 +199,7 @@ def internal():
 
 @click.command()
 def image_name():
-    click.echo(get_environment_identifier())
+    click.echo(generate_image_name())
 
 
 internal.add_command(image_name)

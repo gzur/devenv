@@ -4,7 +4,6 @@ import docker
 import hashlib
 import io
 import logging
-
 # TODO:
 #   * Namespaced bash history
 #   * Cross-platform compatibility
@@ -25,10 +24,20 @@ client = docker.from_env()
 api_client = docker.APIClient()
 
 
+def test_docker_connection():
+    try:
+        client.images.list()
+        return True
+    except OSError:
+        # The docker client raises an exception that boils down to the
+        # OSError builtin if it can't reach the docker daemon.
+        return False
+
+
 def delete_containers(env_identifier=None):
     # only delete containers belonging to this environment
     if env_identifier is None:
-        env_identifier = get_environment_identifier()
+        env_identifier = generate_image_name()
     filter_str = 'owner={env_identifier}'.format(env_identifier=env_identifier)
     deleted = client.containers.prune(dict(label=filter_str))
     container_ids = ",".join(deleted.get('ContainersDeleted') or [])
@@ -55,7 +64,7 @@ def commit_container(temporary=False):
     if container is None:
         return "No container found for environment."
     else:
-        image_id = get_environment_identifier(temporary=temporary)
+        image_id = generate_image_name(temporary=temporary)
         container.commit(image_id)
     return "Container commited as: {image}".format(image=image_id)
 
@@ -86,6 +95,12 @@ def start_new_shell(env_id, container_name,
     )
     volumes = default_volumes + user_volumes
     volume_str = generate_vol_string(volumes)
+    if not shell_exists(env_id, entrypoint):
+        log.debug("Overriding entrypoint {some_shell} with default entrypoint {sh}".format(
+            some_shell=entrypoint,
+            sh="sh"
+        ))
+        entrypoint = "sh"
     log.debug("Volume string generated: {vol_str}".format(vol_str=volume_str))
     cmd = "docker run -i -t {volumes} " \
         "--label=owner={env_id} " \
@@ -106,6 +121,9 @@ def start_new_shell(env_id, container_name,
     print("Docker command: {cmd}".format(cmd=cmd))
     return os.system(cmd)
 
+def shell_exists(image, path):
+    cmd = "docker run {image} which {file}".format(image=image, file=path)
+    return os.system(cmd) == 0
 
 def get_dirname(dir_path=None):
     if dir_path is None:
@@ -113,7 +131,7 @@ def get_dirname(dir_path=None):
     return os.path.basename(dir_path)
 
 
-def get_environment_identifier(temporary=False):
+def generate_image_name(temporary=False):
     dir_path = os.getcwd()
     dir_name = get_dirname(dir_path)
     tmp_str = ""
@@ -132,18 +150,20 @@ def get_image(name):
     try:
         return client.images.get(name)
     except docker.errors.ImageNotFound:
+        log.debug("Image %s not found." % name)
         return None
 
 
-def get_container(container_id_or_name):
+def get_container(container):
     try:
-        return client.containers.get(container_id_or_name)
+        return client.containers.get(container)
     except docker.errors.NotFound:
+        log.debug("Container %s not found." % container)
         return None
 
 
-def get_container_name() -> str:
-    return "container_{image_name}".format(image_name=get_environment_identifier())
+def get_container_name():
+    return "container_{image_name}".format(image_name=generate_image_name())
 
 
 def build_image(force=False, dockerfile_path=None, base_image=None):
@@ -155,15 +175,14 @@ def build_image(force=False, dockerfile_path=None, base_image=None):
     elif dockerfile_path is not None:
         with open(dockerfile_path, 'r') as dockerfile:
             docker_file_str = dockerfile.read()
-            docker_file_str
 
     docker_file_str += DOCKERFILE_END
     docker_file = io.BytesIO(docker_file_str.format(
-        env_id=get_environment_identifier(),
+        env_id=generate_image_name(),
         work_dir=get_dirname()
     ).encode())
 
-    env_identifier = get_environment_identifier()
+    env_identifier = generate_image_name()
     build_params = dict(
         fileobj= docker_file,
         tag=env_identifier,

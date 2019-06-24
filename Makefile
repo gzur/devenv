@@ -9,3 +9,9 @@ develop:
 uninstall:
 	@cat .installed_files | xargs rm -v
 	@rm .installed_files
+
+test:
+	nosetests tests/unittests/
+
+test_debug:
+	nosetests -s --nocapture tests/unittests/
