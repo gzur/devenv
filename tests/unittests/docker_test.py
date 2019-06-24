@@ -8,12 +8,6 @@ test_client = docker.from_env()
 TEST_DIR = '/tmp'
 
 
-def test_env_identifier():
-    os.chdir(TEST_DIR)
-    test_name = generate_image_name()
-    assert test_name == "tmp_d0f036b9"
-
-
 def test_container_name():
     os.chdir(TEST_DIR)
     container_name = get_container_name()
