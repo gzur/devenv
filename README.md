@@ -1,4 +1,5 @@
 # Development Environment Manager
+[![Build Status](https://travis-ci.com/gzur/devenv.svg?branch=master)](https://travis-ci.com/gzur/devenv)
 
 ## Main features:
   * Persist installed packages, configuration and bash history for later.
