@@ -15,3 +15,6 @@ test:
 
 test_debug:
 	nosetests -s --nocapture tests/unittests/
+
+black:
+	black -Sl100 devenv/ tests/
