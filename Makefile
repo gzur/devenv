@@ -14,8 +14,8 @@ install_test_requirements:
 	pip install -qr requirements.txt
 	pip install -qr test-requirements.txt
 
-test: install_test_requirements clean
-	pytest tests/unittests/
+test: clean
+	pytest tests/
 
 black:
 	black -Sl100 devenv/ tests/
@@ -33,3 +33,4 @@ test_debian: clean
 clean:
 	@find devenv -type f | grep \.pyc | xargs rm
 	@find tests -type f | grep \.pyc | xargs rm
+	@find tests -type d | grep \__pycache__ | xargs rm -rf
