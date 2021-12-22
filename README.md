@@ -5,7 +5,7 @@
   * Persist installed packages, configuration and bash history for later.
   * Automatically mount your project into the environment.
   * Automatically discover previously built/modified enviroments (based on project path)
-  * Specify what base docker image to build environments on top off..
+  * Specify what base docker image to build environments.
  
 # Quickstart
 
@@ -20,7 +20,7 @@ devenv shell
 3. PROFIT!
 
 # Usage
-All of the below assumes you to be located in your project directory.
+Everything below assumes you to be located in your project directory.
 `devenv` bases all of its assumptions on where you are located on a file-system level.
 
 ### Build
