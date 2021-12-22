@@ -5,3 +5,5 @@ ve-*
 *.pytest_cache
 build
 dist
+venv
+.installed_files
